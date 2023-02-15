@@ -13,6 +13,7 @@ extern long BLIND_SPOT_HOME; // слепая зона от "дома" до пе�
 extern long BLIND_SPOT;      // слепая зона между пробирками
 extern long SCANNING_AREA;   // зона сканирования
 extern long SPEED_SCAN;      // скорость движения портала при сканировании
+extern long TRAY_CORRECTION; // корреция порта относительно датчика "дом"
 
 enum TrayState
 {
@@ -53,10 +54,16 @@ void Portal::run_HomePosition(bool state) // портал в поизиции д
     {
         start = true;
     }
+    // корреция по датчику "дом"
+    if(state && statePortal() != homePositon && statePortal() != startPosition)
+    {
+        Tstepper.moveTo(TRAY_CORRECTION);
+        Tstepper.run();
+    }
     if (positionHome)
     {
         static bool flag = false;
-        if (statePortal() == homePositon)
+         if (statePortal() == homePositon)
         {
             Tstepper.stop();
             positionHome = 0;
@@ -97,9 +104,9 @@ void Portal::run_HomePosition(bool state) // портал в поизиции д
         switch (cnt)
         {
         case BLIND_SPOT_CASEHOME:
-            Tstepper.moveTo(BLIND_SPOT_HOME); // едем до первой пробирки от дома
+            Tstepper.moveTo(BLIND_SPOT_HOME - TRAY_CORRECTION); // едем до первой пробирки от дома
             Tstepper.run();
-            if (Tstepper.currentPosition() == BLIND_SPOT_HOME)
+            if (Tstepper.currentPosition() == (BLIND_SPOT_HOME - TRAY_CORRECTION))
             {
                 cnt = SCAN_REGION;
                 Capture = Tstepper.currentPosition();

@@ -12,6 +12,7 @@ long BLIND_SPOT_HOME = 270; // слепая зона от "дома" до пер
 long BLIND_SPOT = 125;      // слепая зона между пробирками
 long SCANNING_AREA = 5;     // зона сканирования
 long SPEED_SCAN = 18000;    // скорость движения портала при сканировании
+long TRAY_CORRECTION = 50;  // коррекция портала относительно датчика "дом"
 
 // Переменные для EEPROM
 bool startKey = false;
