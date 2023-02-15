@@ -7,6 +7,7 @@
 #include <EEPROM.h>
 
 // Параметры пользователя
+int NUMB_TUBE = 48;   // количество пробирок
 long BLIND_SPOT_HOME = 270; // слепая зона от "дома" до первой пробирки
 long BLIND_SPOT = 125;      // слепая зона между пробирками
 long SCANNING_AREA = 5;     // зона сканирования

@@ -5,6 +5,9 @@
 #define SCAN_LEFT Serial1
 #define SCAN_RIGHT Serial2
 
+extern int NUMB_TUBE;
+const int nTUBE = (NUMB_TUBE >> 1)-1;
+
 const int txPin = 13;
 const int rxPin = 12;
 SoftwareSerial rackSerial(txPin, rxPin);
@@ -35,7 +38,7 @@ void Barcode::clear()
 {
     counter_left = 0;
     counter_right = 0;
-    for (int i = 0; i < 24; ++i)
+    for (int i = 0; i <= nTUBE; ++i)
     {
         arr[0][i] = 0;
         arr[1][i] = 0;
@@ -52,9 +55,10 @@ void Barcode::debugData()
     {
         arr[1][counter_right++] = SCAN_RIGHT.parseInt();
     }
-    if (counter_left >= 23 && counter_right >= 23)
+    if (counter_left >= nTUBE && counter_right >= nTUBE)
     {
-        for (int a = 0; a < 24; a++)
+        delay(100); // отладочный - потом удалить!
+        for (int a = 0; a <= nTUBE; a++)
         {
             DEBUG_SERIAL.println(arr[0][a]);
             DEBUG_SERIAL.println('\t');

@@ -56,6 +56,14 @@ void Portal::run_HomePosition(bool state) // портал в поизиции д
     if (positionHome)
     {
         static bool flag = false;
+        if (statePortal() == homePositon)
+        {
+            Tstepper.stop();
+            positionHome = 0;
+            cntPauseOffBarcode = 0;
+            flag = false;
+        }
+
         if (!flag)
         {
             flag = true;
