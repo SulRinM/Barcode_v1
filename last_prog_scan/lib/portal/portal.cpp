@@ -50,16 +50,28 @@ void Portal::run_HomePosition(bool state) // портал в поизиции д
 {
     static bool start = false;
     static long cntPauseOffBarcode = 0;
+    static bool TrayCorrectionPosition = false;
+    static long TrayCorrectionZeroValue = 0;
     if (state && statePortal() == homePositon) // нажали старт
     {
         start = true;
     }
-    // корреция по датчику "дом"
-    if(state && statePortal() != homePositon && statePortal() != startPosition)
+
+    // если корекции ранее не было
+    if(!TrayCorrectionPosition)
     {
+        //начать коррецию
         Tstepper.moveTo(TRAY_CORRECTION);
         Tstepper.run();
+        // поймали датчик и захватили условный ноль
+        if(statePortal() == homePositon) 
+        {
+            Tstepper.stop();
+            TrayCorrectionZeroValue = Tstepper.currentPosition();
+            TrayCorrectionPosition = true;
+        }
     }
+
     if (positionHome)
     {
         static bool flag = false;
@@ -79,7 +91,7 @@ void Portal::run_HomePosition(bool state) // портал в поизиции д
         }
         if (cntPauseOffBarcode++ > TIME_SCAN_ON_START_POSITION)
         {
-            Tstepper.moveTo(0);
+            Tstepper.moveTo(-TrayCorrectionZeroValue);
             Tstepper.run();
             digitalWrite(pinleftBarcode, LOW); // через 200мс выключаем сканеры
             digitalWrite(pinrightBarcode, LOW);
