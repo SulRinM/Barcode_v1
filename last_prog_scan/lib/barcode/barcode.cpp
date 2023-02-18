@@ -6,7 +6,7 @@
 #define SCAN_RIGHT Serial2
 
 extern int NUMB_TUBE;
-const int nTUBE = (NUMB_TUBE >> 1)-1;
+const int nTUBE = (NUMB_TUBE >> 1);
 
 const int txPin = 13;
 const int rxPin = 12;
@@ -48,18 +48,20 @@ void Barcode::clear()
 void Barcode::debugData()
 {
     static bool flag = false;
-    if (SCAN_LEFT.available() > 1)
+    if (SCAN_LEFT.available() > 0)
     {
         arr[0][counter_left++] = SCAN_LEFT.parseInt();
+        counter_left = counter_left % nTUBE;
     }
-    if (SCAN_RIGHT.available() > 1)
+    if (SCAN_RIGHT.available() > 0)
     {
         arr[1][counter_right++] = SCAN_RIGHT.parseInt();
+        counter_right = counter_right % nTUBE;
     }
-    if (counter_left >= nTUBE && counter_right >= nTUBE && !flag)
+    if (counter_left >= nTUBE-1 && counter_right >= nTUBE-1 && !flag)
     {
         delay(100); // отладочный - потом удалить!
-        for (int a = 0; a <= nTUBE; a++)
+        for (int a = 0; a < nTUBE; a++)
         {
             DEBUG_SERIAL.println(arr[0][a]);
             DEBUG_SERIAL.println('\t');
