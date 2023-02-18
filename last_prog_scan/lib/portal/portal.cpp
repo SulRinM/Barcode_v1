@@ -71,6 +71,9 @@ void Portal::run_HomePosition(bool state)
     if(state && homePositon == statePortal())
     {
         start = true;
+        Tstepper.setSpeed(1000); 
+        Tstepper.setMaxSpeed(4000);     // SPEED = Steps / second
+        Tstepper.setAcceleration(1000); // ACCELERATION = Steps /(second)^2
     }
     if(start)
     {
