@@ -56,7 +56,7 @@ void Portal::run_HomePosition(bool state)
     if(homePositon != statePortal() && !start && !correction)
     {
         //тогда двигаем портал в сторону дома
-        Tstepper.setSpeed(-4000); 
+        Tstepper.setSpeed(-1000); 
         Tstepper.runSpeed();
     }
     // портал встал на исходную позицию
@@ -74,8 +74,45 @@ void Portal::run_HomePosition(bool state)
     }
     if(start)
     {
+        switch (cnt)
+        {
+        case BLIND_SPOT_CASEHOME:
+            Tstepper.moveTo(BLIND_SPOT_HOME + debugMotorPosition); // едем до первой пробирки от дома
+            Tstepper.run();
+            if (Tstepper.currentPosition() == (BLIND_SPOT_HOME + debugMotorPosition))
+            {
+                cnt = SCAN_REGION;
+                Capture = Tstepper.currentPosition();
+            }
+            break;
 
-        
+        case SCAN_REGION:
+            sum = Capture + SCANNING_AREA;
+            Tstepper.moveTo(sum);
+            Tstepper.run();
+            if (Tstepper.currentPosition() == sum)
+            {
+                digitalWrite(pinleftBarcode, HIGH);
+                digitalWrite(pinrightBarcode, HIGH);
+                cnt = BLIND_SPOT_CASETUBE;
+                Capture = Tstepper.currentPosition();
+            }
+            break;
+
+        case BLIND_SPOT_CASETUBE:
+            sum = Capture + BLIND_SPOT;
+            Tstepper.moveTo(sum);
+            Tstepper.run();
+            if (Tstepper.currentPosition() == sum)
+            {
+                digitalWrite(pinleftBarcode, LOW);
+                digitalWrite(pinrightBarcode, LOW);
+                cnt = SCAN_REGION;
+                Capture = Tstepper.currentPosition();
+            }
+            break;
+        }
+
     }
 }
 
