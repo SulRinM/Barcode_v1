@@ -47,6 +47,7 @@ void Barcode::clear()
 
 void Barcode::debugData()
 {
+    static bool flag = false;
     if (SCAN_LEFT.available() > 1)
     {
         arr[0][counter_left++] = SCAN_LEFT.parseInt();
@@ -55,7 +56,7 @@ void Barcode::debugData()
     {
         arr[1][counter_right++] = SCAN_RIGHT.parseInt();
     }
-    if (counter_left >= nTUBE && counter_right >= nTUBE)
+    if (counter_left >= nTUBE && counter_right >= nTUBE && !flag)
     {
         delay(100); // отладочный - потом удалить!
         for (int a = 0; a <= nTUBE; a++)
@@ -66,5 +67,6 @@ void Barcode::debugData()
             DEBUG_SERIAL.println('\n');
         }
         //clear();
+        flag = true;
     }
 }
