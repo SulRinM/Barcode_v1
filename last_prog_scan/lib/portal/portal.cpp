@@ -15,6 +15,8 @@ extern long SCANNING_AREA;   // зона сканирования
 extern long SPEED_SCAN;      // скорость движения портала при сканировании
 extern long TRAY_CORRECTION; // корреция порта относительно датчика "дом"
 
+long debugMotorPosition = 0;
+
 enum TrayState
 {
     homePositon = 1,
@@ -46,114 +48,146 @@ void Portal::init()
     Tstepper.run();
 }
 
-void Portal::run_HomePosition(bool state) // портал в поизиции дома
+void Portal::run_HomePosition(bool state)
 {
-    static bool start = false;
-    static long cntPauseOffBarcode = 0;
-    static long TrayCorrectionZeroValue = 0;
-    static bool runTray = false;
-    static bool TrayCorrect = false;
-
-    // корреция портала по датчику
-    if (statePortal() != homePositon && !runTray && !TrayCorrect)
+    auto start = false;
+    auto correction = false;
+    // если портал не на исходной позиции и не было команды старта
+    if(homePositon != statePortal() && !start && !correction)
     {
-        Tstepper.moveTo(-100000);
-        Tstepper.run();
-        if (statePortal() == homePositon)
-        {
-            TrayCorrectionZeroValue = Tstepper.currentPosition();
-            Tstepper.stop();
-            TrayCorrect = true; // получили коррекцию
-        }
+        //тогда двигаем портал в сторону дома
+        Tstepper.setSpeed(-4000); 
+        Tstepper.runSpeed();
     }
-
-    if (state && statePortal() == homePositon) // нажали старт
+    // портал встал на исходную позицию
+    else if(homePositon == statePortal() && !start)
+    {
+        // передаем значение позиции 
+        debugMotorPosition = Tstepper.currentPosition();
+        Tstepper.stop(); 
+        correction = true;
+    }
+    // запустили по кнопке
+    if(state && homePositon == statePortal())
     {
         start = true;
-        runTray = true;
     }
-    if (positionHome)
+    if(start)
     {
-        static bool flag = false;
-        if (statePortal() == homePositon)
-        {
-            Tstepper.stop();
-            positionHome = 0;
-            cntPauseOffBarcode = 0;
-            flag = false;
-        }
 
-        if (!flag)
-        {
-            flag = true;
-            digitalWrite(pinleftBarcode, HIGH);
-            digitalWrite(pinrightBarcode, HIGH);
-        }
-        if (cntPauseOffBarcode++ > TIME_SCAN_ON_START_POSITION)
-        {
-            Tstepper.moveTo(TrayCorrectionZeroValue); // вернули домой к датчику
-            Tstepper.run();
-            digitalWrite(pinleftBarcode, LOW); // через 200мс выключаем сканеры
-            digitalWrite(pinrightBarcode, LOW);
-        }
-        if (Tstepper.currentPosition() == 0)
-        {
-            positionHome = 0;
-            cntPauseOffBarcode = 0;
-            flag = false;
-            runTray = false;
-        }
-    }
-    if (start)
-    {
-        if (statePortal() == startPosition) // дошли до датчика положения старта
-        {
-            start = false;
-            cnt = 0;
-            positionHome = true;
-            Tstepper.stop();
-            return;
-        }
-        switch (cnt)
-        {
-        case BLIND_SPOT_CASEHOME:
-            Tstepper.moveTo(BLIND_SPOT_HOME + labs(TrayCorrectionZeroValue)); // едем до первой пробирки от дома
-            Tstepper.run();
-            if (Tstepper.currentPosition() == (BLIND_SPOT_HOME + labs(TrayCorrectionZeroValue)))
-            {
-                cnt = SCAN_REGION;
-                Capture = Tstepper.currentPosition();
-            }
-            break;
-
-        case SCAN_REGION:
-            sum = Capture + SCANNING_AREA;
-            Tstepper.moveTo(sum);
-            Tstepper.run();
-            if (Tstepper.currentPosition() == sum)
-            {
-                digitalWrite(pinleftBarcode, HIGH);
-                digitalWrite(pinrightBarcode, HIGH);
-                cnt = BLIND_SPOT_CASETUBE;
-                Capture = Tstepper.currentPosition();
-            }
-            break;
-
-        case BLIND_SPOT_CASETUBE:
-            sum = Capture + BLIND_SPOT;
-            Tstepper.moveTo(sum);
-            Tstepper.run();
-            if (Tstepper.currentPosition() == sum)
-            {
-                digitalWrite(pinleftBarcode, LOW);
-                digitalWrite(pinrightBarcode, LOW);
-                cnt = SCAN_REGION;
-                Capture = Tstepper.currentPosition();
-            }
-            break;
-        }
+        
     }
 }
+
+
+// void Portal::run_HomePosition(bool state) // портал в поизиции дома
+// {
+//     static bool start = false;
+//     static long cntPauseOffBarcode = 0;
+//     static long TrayCorrectionZeroValue = 0;
+//     static bool runTray = false;
+//     static bool TrayCorrect = false;
+
+//     // корреция портала по датчику
+//     if (statePortal() != homePositon && !runTray && !TrayCorrect)
+//     {
+//         Tstepper.moveTo(-100000);
+//         Tstepper.run();
+//         if (statePortal() == homePositon)
+//         {
+//             TrayCorrectionZeroValue = Tstepper.currentPosition();
+//             Tstepper.stop();
+//             TrayCorrect = true; // получили коррекцию
+//         }
+//     }
+
+//     if (state && statePortal() == homePositon) // нажали старт
+//     {
+//         start = true;
+//         runTray = true;
+//     }
+//     if (positionHome)
+//     {
+//         static bool flag = false;
+//         if (statePortal() == homePositon)
+//         {
+//             Tstepper.stop();
+//             positionHome = 0;
+//             cntPauseOffBarcode = 0;
+//             flag = false;
+//         }
+
+//         if (!flag)
+//         {
+//             flag = true;
+//             digitalWrite(pinleftBarcode, HIGH);
+//             digitalWrite(pinrightBarcode, HIGH);
+//         }
+//         if (cntPauseOffBarcode++ > TIME_SCAN_ON_START_POSITION)
+//         {
+//             Tstepper.moveTo(TrayCorrectionZeroValue); // вернули домой к датчику
+//             Tstepper.run();
+//             digitalWrite(pinleftBarcode, LOW); // через 200мс выключаем сканеры
+//             digitalWrite(pinrightBarcode, LOW);
+//         }
+//         if (Tstepper.currentPosition() == 0)
+//         {
+//             positionHome = 0;
+//             cntPauseOffBarcode = 0;
+//             flag = false;
+//             runTray = false;
+//         }
+//     }
+//     if (start)
+//     {
+//         if (statePortal() == startPosition) // дошли до датчика положения старта
+//         {
+//             start = false;
+//             cnt = 0;
+//             positionHome = true;
+//             Tstepper.stop();
+//             return;
+//         }
+//         switch (cnt)
+//         {
+//         case BLIND_SPOT_CASEHOME:
+//             Tstepper.moveTo(BLIND_SPOT_HOME + labs(TrayCorrectionZeroValue)); // едем до первой пробирки от дома
+//             Tstepper.run();
+//             if (Tstepper.currentPosition() == (BLIND_SPOT_HOME + labs(TrayCorrectionZeroValue)))
+//             {
+//                 cnt = SCAN_REGION;
+//                 Capture = Tstepper.currentPosition();
+//             }
+//             break;
+
+//         case SCAN_REGION:
+//             sum = Capture + SCANNING_AREA;
+//             Tstepper.moveTo(sum);
+//             Tstepper.run();
+//             if (Tstepper.currentPosition() == sum)
+//             {
+//                 digitalWrite(pinleftBarcode, HIGH);
+//                 digitalWrite(pinrightBarcode, HIGH);
+//                 cnt = BLIND_SPOT_CASETUBE;
+//                 Capture = Tstepper.currentPosition();
+//             }
+//             break;
+
+//         case BLIND_SPOT_CASETUBE:
+//             sum = Capture + BLIND_SPOT;
+//             Tstepper.moveTo(sum);
+//             Tstepper.run();
+//             if (Tstepper.currentPosition() == sum)
+//             {
+//                 digitalWrite(pinleftBarcode, LOW);
+//                 digitalWrite(pinrightBarcode, LOW);
+//                 cnt = SCAN_REGION;
+//                 Capture = Tstepper.currentPosition();
+//             }
+//             break;
+//         }
+//     }
+// }
 
 int Portal::statePortal()
 {

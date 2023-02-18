@@ -12,6 +12,8 @@ const int txPin = 13;
 const int rxPin = 12;
 SoftwareSerial rackSerial(txPin, rxPin);
 
+extern long debugMotorPosition;
+
 Barcode::Barcode()
 {
 }
@@ -47,18 +49,23 @@ void Barcode::clear()
 
 void Barcode::debugData()
 {
-    static bool flag = false;
+    static bool flag1 = false;
+    static bool flag2 = false;
+    DEBUG_SERIAL.println(debugMotorPosition);
+
     if (SCAN_LEFT.available() > 0)
     {
         arr[0][counter_left++] = SCAN_LEFT.parseInt();
+        if(counter_left >= nTUBE) flag1 = true;
         counter_left = counter_left % nTUBE;
     }
     if (SCAN_RIGHT.available() > 0)
     {
         arr[1][counter_right++] = SCAN_RIGHT.parseInt();
+        if(counter_right >= nTUBE) flag2 = true;
         counter_right = counter_right % nTUBE;
     }
-    if (counter_left >= nTUBE-1 && counter_right >= nTUBE-1 && !flag)
+    if (flag1 && flag2)
     {
         delay(100); // отладочный - потом удалить!
         for (int a = 0; a < nTUBE; a++)
@@ -69,6 +76,6 @@ void Barcode::debugData()
             DEBUG_SERIAL.println('\n');
         }
         //clear();
-        flag = true;
+       flag1 = flag2 = false;
     }
 }
