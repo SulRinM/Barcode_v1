@@ -50,32 +50,32 @@ void Portal::run_HomePosition(bool state) // портал в поизиции д
 {
     static bool start = false;
     static long cntPauseOffBarcode = 0;
-    static bool TrayCorrectionPosition = false;
     static long TrayCorrectionZeroValue = 0;
-    if (state && statePortal() == homePositon) // нажали старт
-    {
-        start = true;
-    }
+    static bool runTray = false;
+    static bool TrayCorrect = false;
 
-    // если корекции ранее не было
-    if(!TrayCorrectionPosition)
+    // корреция портала по датчику
+    if (statePortal() != homePositon && !runTray && !TrayCorrect)
     {
-        //начать коррецию
-        Tstepper.moveTo(TRAY_CORRECTION);
+        Tstepper.moveTo(-100000);
         Tstepper.run();
-        // поймали датчик и захватили условный ноль
-        if(statePortal() == homePositon) 
+        if (statePortal() == homePositon)
         {
-            Tstepper.stop();
             TrayCorrectionZeroValue = Tstepper.currentPosition();
-            TrayCorrectionPosition = true;
+            Tstepper.stop();
+            TrayCorrect = true; // получили коррекцию
         }
     }
 
+    if (state && statePortal() == homePositon) // нажали старт
+    {
+        start = true;
+        runTray = true;
+    }
     if (positionHome)
     {
         static bool flag = false;
-         if (statePortal() == homePositon)
+        if (statePortal() == homePositon)
         {
             Tstepper.stop();
             positionHome = 0;
@@ -91,7 +91,7 @@ void Portal::run_HomePosition(bool state) // портал в поизиции д
         }
         if (cntPauseOffBarcode++ > TIME_SCAN_ON_START_POSITION)
         {
-            Tstepper.moveTo(-TrayCorrectionZeroValue);
+            Tstepper.moveTo(TrayCorrectionZeroValue); // вернули домой к датчику
             Tstepper.run();
             digitalWrite(pinleftBarcode, LOW); // через 200мс выключаем сканеры
             digitalWrite(pinrightBarcode, LOW);
@@ -101,6 +101,7 @@ void Portal::run_HomePosition(bool state) // портал в поизиции д
             positionHome = 0;
             cntPauseOffBarcode = 0;
             flag = false;
+            runTray = false;
         }
     }
     if (start)
@@ -116,9 +117,9 @@ void Portal::run_HomePosition(bool state) // портал в поизиции д
         switch (cnt)
         {
         case BLIND_SPOT_CASEHOME:
-            Tstepper.moveTo(BLIND_SPOT_HOME - TRAY_CORRECTION); // едем до первой пробирки от дома
+            Tstepper.moveTo(BLIND_SPOT_HOME + labs(TrayCorrectionZeroValue)); // едем до первой пробирки от дома
             Tstepper.run();
-            if (Tstepper.currentPosition() == (BLIND_SPOT_HOME - TRAY_CORRECTION))
+            if (Tstepper.currentPosition() == (BLIND_SPOT_HOME + labs(TrayCorrectionZeroValue)))
             {
                 cnt = SCAN_REGION;
                 Capture = Tstepper.currentPosition();

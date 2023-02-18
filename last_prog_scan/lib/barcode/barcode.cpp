@@ -65,6 +65,6 @@ void Barcode::debugData()
             DEBUG_SERIAL.println(arr[1][a]);
             DEBUG_SERIAL.println('\n');
         }
-        clear();
+        //clear();
     }
 }
