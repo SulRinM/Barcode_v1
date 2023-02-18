@@ -13,6 +13,7 @@ const int rxPin = 12;
 SoftwareSerial rackSerial(txPin, rxPin);
 
 extern long debugMotorPosition;
+extern bool startKey;
 
 Barcode::Barcode()
 {
@@ -51,7 +52,7 @@ void Barcode::debugData()
 {
     static bool flag1 = false;
     static bool flag2 = false;
-    DEBUG_SERIAL.println(debugMotorPosition);
+   // DEBUG_SERIAL.println(startKey);
 
     if (SCAN_LEFT.available() > 0)
     {

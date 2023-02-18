@@ -48,4 +48,6 @@ void loop()
 {
     call_menu();
     barcode.debugData();
+
+    
 }

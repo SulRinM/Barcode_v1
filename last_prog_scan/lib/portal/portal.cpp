@@ -28,6 +28,7 @@ enum zone
     BLIND_SPOT_CASEHOME = 0, // слепая зона от позиции дома до первой пробирки
     BLIND_SPOT_CASETUBE,     // слепая зона между пробирками
     SCAN_REGION,             // зона сканирования
+    GO_HOME                  // сканирование завершено - поехали домой
 };
 
 Portal::Portal()
@@ -44,45 +45,43 @@ void Portal::init()
     Tstepper.setMaxSpeed(4000);     // SPEED = Steps / second
     Tstepper.setAcceleration(1000); // ACCELERATION = Steps /(second)^2
     Tstepper.enableOutputs();       // enable pins
-    Tstepper.moveTo(150000);
-    Tstepper.run();
+                                    //  Tstepper.moveTo(150000);
+                                    //  Tstepper.run();
 }
 
 void Portal::run_HomePosition(bool state)
 {
-    auto start = false;
-    auto correction = false;
-    // если портал не на исходной позиции и не было команды старта
-    if(homePositon != statePortal() && !start && !correction)
+    // после запуска начинаем коррекцию
+    static bool Correction = false;
+    static bool StartScan = false;
+    static long LastPosition = 0;
+    if (!Correction && homePositon != statePortal())
     {
-        //тогда двигаем портал в сторону дома
-        Tstepper.setSpeed(-1000); 
-        Tstepper.runSpeed();
+        Tstepper.setSpeed(-1000);
+        Tstepper.run();
     }
-    // портал встал на исходную позицию
-    else if(homePositon == statePortal() && !start)
+    // коррекция завершена
+    else if (!Correction && homePositon == statePortal())
     {
-        // передаем значение позиции 
-        debugMotorPosition = Tstepper.currentPosition();
-        Tstepper.stop(); 
-        correction = true;
+        Tstepper.stop();
+        LastPosition = Tstepper.currentPosition();
+        Correction = true;
     }
-    // запустили по кнопке
-    if(state && homePositon == statePortal())
+    // запуск портала
+    if (Correction && (state || StartScan))
     {
-        start = true;
-        Tstepper.setSpeed(1000); 
-        Tstepper.setMaxSpeed(4000);     // SPEED = Steps / second
-        Tstepper.setAcceleration(1000); // ACCELERATION = Steps /(second)^2
-    }
-    if(start)
-    {
+        StartScan = true;
+        // отработал датчик старта
+        if (startPosition == statePortal())
+        {
+            cnt = GO_HOME;
+        }
         switch (cnt)
         {
         case BLIND_SPOT_CASEHOME:
-            Tstepper.moveTo(BLIND_SPOT_HOME + debugMotorPosition); // едем до первой пробирки от дома
+            Tstepper.moveTo(LastPosition + BLIND_SPOT_HOME); // едем до первой пробирки от дома
             Tstepper.run();
-            if (Tstepper.currentPosition() == (BLIND_SPOT_HOME + debugMotorPosition))
+            if (Tstepper.currentPosition() == (LastPosition + BLIND_SPOT_HOME))
             {
                 cnt = SCAN_REGION;
                 Capture = Tstepper.currentPosition();
@@ -114,120 +113,32 @@ void Portal::run_HomePosition(bool state)
                 Capture = Tstepper.currentPosition();
             }
             break;
-        }
 
+        case GO_HOME:
+            static unsigned long CounterOnState = 0;
+            Tstepper.moveTo(LastPosition);
+            Tstepper.run();
+            if (CounterOnState < TIME_SCAN_ON_START_POSITION)
+            {
+                digitalWrite(pinleftBarcode, HIGH);
+                digitalWrite(pinrightBarcode, HIGH);
+            }
+            else
+            {
+                digitalWrite(pinleftBarcode, LOW);
+                digitalWrite(pinrightBarcode, LOW);
+            }
+            CounterOnState++;
+            if (Tstepper.currentPosition() == LastPosition)
+            {
+                StartScan = false;
+                CounterOnState = 0;
+                cnt = BLIND_SPOT_CASEHOME;
+            }
+            break;
+        }
     }
 }
-
-
-// void Portal::run_HomePosition(bool state) // портал в поизиции дома
-// {
-//     static bool start = false;
-//     static long cntPauseOffBarcode = 0;
-//     static long TrayCorrectionZeroValue = 0;
-//     static bool runTray = false;
-//     static bool TrayCorrect = false;
-
-//     // корреция портала по датчику
-//     if (statePortal() != homePositon && !runTray && !TrayCorrect)
-//     {
-//         Tstepper.moveTo(-100000);
-//         Tstepper.run();
-//         if (statePortal() == homePositon)
-//         {
-//             TrayCorrectionZeroValue = Tstepper.currentPosition();
-//             Tstepper.stop();
-//             TrayCorrect = true; // получили коррекцию
-//         }
-//     }
-
-//     if (state && statePortal() == homePositon) // нажали старт
-//     {
-//         start = true;
-//         runTray = true;
-//     }
-//     if (positionHome)
-//     {
-//         static bool flag = false;
-//         if (statePortal() == homePositon)
-//         {
-//             Tstepper.stop();
-//             positionHome = 0;
-//             cntPauseOffBarcode = 0;
-//             flag = false;
-//         }
-
-//         if (!flag)
-//         {
-//             flag = true;
-//             digitalWrite(pinleftBarcode, HIGH);
-//             digitalWrite(pinrightBarcode, HIGH);
-//         }
-//         if (cntPauseOffBarcode++ > TIME_SCAN_ON_START_POSITION)
-//         {
-//             Tstepper.moveTo(TrayCorrectionZeroValue); // вернули домой к датчику
-//             Tstepper.run();
-//             digitalWrite(pinleftBarcode, LOW); // через 200мс выключаем сканеры
-//             digitalWrite(pinrightBarcode, LOW);
-//         }
-//         if (Tstepper.currentPosition() == 0)
-//         {
-//             positionHome = 0;
-//             cntPauseOffBarcode = 0;
-//             flag = false;
-//             runTray = false;
-//         }
-//     }
-//     if (start)
-//     {
-//         if (statePortal() == startPosition) // дошли до датчика положения старта
-//         {
-//             start = false;
-//             cnt = 0;
-//             positionHome = true;
-//             Tstepper.stop();
-//             return;
-//         }
-//         switch (cnt)
-//         {
-//         case BLIND_SPOT_CASEHOME:
-//             Tstepper.moveTo(BLIND_SPOT_HOME + labs(TrayCorrectionZeroValue)); // едем до первой пробирки от дома
-//             Tstepper.run();
-//             if (Tstepper.currentPosition() == (BLIND_SPOT_HOME + labs(TrayCorrectionZeroValue)))
-//             {
-//                 cnt = SCAN_REGION;
-//                 Capture = Tstepper.currentPosition();
-//             }
-//             break;
-
-//         case SCAN_REGION:
-//             sum = Capture + SCANNING_AREA;
-//             Tstepper.moveTo(sum);
-//             Tstepper.run();
-//             if (Tstepper.currentPosition() == sum)
-//             {
-//                 digitalWrite(pinleftBarcode, HIGH);
-//                 digitalWrite(pinrightBarcode, HIGH);
-//                 cnt = BLIND_SPOT_CASETUBE;
-//                 Capture = Tstepper.currentPosition();
-//             }
-//             break;
-
-//         case BLIND_SPOT_CASETUBE:
-//             sum = Capture + BLIND_SPOT;
-//             Tstepper.moveTo(sum);
-//             Tstepper.run();
-//             if (Tstepper.currentPosition() == sum)
-//             {
-//                 digitalWrite(pinleftBarcode, LOW);
-//                 digitalWrite(pinrightBarcode, LOW);
-//                 cnt = SCAN_REGION;
-//                 Capture = Tstepper.currentPosition();
-//             }
-//             break;
-//         }
-//     }
-// }
 
 int Portal::statePortal()
 {

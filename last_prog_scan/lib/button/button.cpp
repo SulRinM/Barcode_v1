@@ -3,6 +3,14 @@
 bool TKeyboard::buttonStart()
 {
     bool result;
+    // static bool flag = false;
+    // if (!flag)
+    // {
+    //     pinMode(A0, INPUT_PULLUP);
+    //     flag = true;
+    // }
+    // result = !digitalRead(A0);
+    // return result;
     int adc = analogRead(A0);
     if (adc > 140 && adc < 160)
     {
